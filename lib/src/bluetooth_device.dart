@@ -22,7 +22,7 @@ class BluetoothDevice {
     Duration? timeout,
     bool autoConnect = true,
   }) async {
-    Completer res = Completer();
+    final Completer res = Completer();
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
       ..androidAutoConnect = autoConnect;
@@ -166,6 +166,24 @@ class BluetoothDevice {
   /// Indicates whether the Bluetooth Device can send a write without response
   Future<bool> get canSendWriteWithoutResponse =>
       new Future.error(new UnimplementedError());
+
+  /// Read the RSSI for a connected remote device
+  Future<int> readRSSI() async {
+    final remoteId = id.toString();
+    await FlutterBlue.instance._channel
+        .invokeMethod('readRSSI', remoteId);
+
+    return FlutterBlue.instance._methodStream
+        .where((m) => m.method == "RSSIResponse")
+        .map((m) => m.arguments)
+        .map((buffer) => protos.RSSIResponse.fromBuffer(buffer))
+        .where((p) =>
+    (p.remoteId == remoteId))
+        .first
+        .then((c) {
+      return (c.rssi);
+    });
+  }
 
   @override
   bool operator ==(Object other) =>
