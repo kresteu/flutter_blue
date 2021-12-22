@@ -35,6 +35,8 @@ class FlutterBlue {
   /// Checks if Bluetooth functionality is turned on
   Future<bool> get isOn => _channel.invokeMethod('isOn').then<bool>((d) => d);
 
+  Future<bool> enableBluetooth() async => await _channel.invokeMethod('enableBluetooth');
+
   BehaviorSubject<bool> _isScanning = BehaviorSubject.seeded(false);
   Stream<bool> get isScanning => _isScanning.stream;
 

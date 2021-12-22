@@ -36,6 +36,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,14 +57,15 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 
 
 /** FlutterBluePlugin */
-public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, RequestPermissionsResultListener  {
+public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, RequestPermissionsResultListener, ActivityResultListener  {
     private static final String TAG = "FlutterBluePlugin";
-    private Object initializationLock = new Object();
+    private final Object initializationLock = new Object();
     private Context context;
     private MethodChannel channel;
     private static final String NAMESPACE = "plugins.pauldemarco.com/flutter_blue";
@@ -77,6 +79,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private Application application;
     private Activity activity;
 
+    private static final int REQUEST_ENABLE_BLUETOOTH = 1;
     private static final int REQUEST_FINE_LOCATION_PERMISSIONS = 1452;
     static final private UUID CCCD_ID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private final Map<String, BluetoothDeviceCache> mDevices = new HashMap<>();
@@ -85,7 +88,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     // Pending call and result for startScan, in the case where permissions are needed
     private MethodCall pendingCall;
     private Result pendingResult;
-    private ArrayList<String> macDeviceScanned = new ArrayList<>();
+    private final ArrayList<String> macDeviceScanned = new ArrayList<>();
     private boolean allowDuplicates = false;
 
     /** Plugin registration. */
@@ -158,9 +161,11 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             if (registrar != null) {
                 // V1 embedding setup for activity listeners.
                 registrar.addRequestPermissionsResultListener(this);
+                registrar.addActivityResultListener(this);
             } else {
                 // V2 embedding setup for activity listeners.
                 activityBinding.addRequestPermissionsResultListener(this);
+                activityBinding.addActivityResultListener(this);
             }
         }
     }
@@ -233,6 +238,15 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             case "isOn":
             {
                 result.success(mBluetoothAdapter.isEnabled());
+                break;
+            }
+
+            case "enableBluetooth":
+            {
+                Log.d(TAG, "enableBluetooth log");
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BLUETOOTH);
+                pendingResult = result;
                 break;
             }
 
@@ -652,14 +666,12 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     @Override
-    public boolean onRequestPermissionsResult(
-            int requestCode, String[] permissions, int[] grantResults) {
+    public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == REQUEST_FINE_LOCATION_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScan(pendingCall, pendingResult);
             } else {
-                pendingResult.error(
-                        "no_permissions", "flutter_blue plugin requires location permissions for scanning", null);
+                pendingResult.error("no_permissions", "flutter_blue plugin requires location permissions for scanning", null);
                 pendingResult = null;
                 pendingCall = null;
             }
@@ -1005,6 +1017,22 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     };
+
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "onActivityResult: "+requestCode+", "+resultCode);
+
+        if (requestCode == REQUEST_ENABLE_BLUETOOTH) {
+            if (resultCode == Activity.RESULT_OK) {
+                Log.d(TAG, "User enabled Bluetooth");
+                pendingResult.success(true);
+            } else {
+                Log.d(TAG, "User did NOT enabled Bluetooth");
+                pendingResult.success(false);
+            }
+        }
+        return false;
+    }
 
     enum LogLevel
     {
