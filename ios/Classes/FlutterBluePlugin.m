@@ -82,6 +82,8 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     } else {
       result(@(NO));
     }
+  } else if([@"enableBluetooth" isEqualToString:call.method]) {
+    result(@(NO));
   } else if([@"startScan" isEqualToString:call.method]) {
     // Clear any existing scan results
     [self.scannedPeripherals removeAllObjects];
