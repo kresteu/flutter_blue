@@ -255,7 +255,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     }
   } else if([@"requestMtu" isEqualToString:call.method]) {
     result([FlutterError errorWithCode:@"requestMtu" message:@"iOS does not allow mtu requests to the peripheral" details:NULL]);
-  } else if([@"readRssi" isEqualToString:call.method]) {
+  } else if([@"readRSSI" isEqualToString:call.method]) {
       NSString *remoteId = [call arguments];
       @try {
         CBPeripheral *peripheral = [self findPeripheral:remoteId];
