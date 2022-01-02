@@ -553,7 +553,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
   ProtosRSSIResponse *result = [[ProtosRSSIResponse alloc] init];
   [result setRemoteId:[peripheral.identifier UUIDString]];
   [result setRssi:[rssi intValue]];
-  [_channel invokeMethod:@"ReadRssiResult" arguments:[self toFlutterData:result]];
+  [_channel invokeMethod:@"RSSIResponse" arguments:[self toFlutterData:result]];
 }
 
 //
